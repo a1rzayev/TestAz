@@ -3,6 +3,8 @@ using TestAzAPI.Models;
 using TestAzAPI.Models.Dtos;
 using TestAzAPI.Repositories.Base;
 using TestAzAPI.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+
 
 namespace TestAzAPI.Controllers;
 
@@ -11,11 +13,16 @@ namespace TestAzAPI.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IUserRepository _userRepo;
+    private readonly IConfiguration _config;
+    private readonly JwtService _jwtService;
 
-    public AuthController(IUserRepository userRepo)
+    public AuthController(IUserRepository userRepo, IConfiguration config, JwtService jwtService)
     {
         _userRepo = userRepo;
+        _config = config;
+        _jwtService = jwtService;
     }
+
 
     [HttpPost("signup")]
     public async Task<IActionResult> Signup(SignupDto dto)
@@ -44,8 +51,8 @@ public class AuthController : ControllerBase
         var user = await _userRepo.GetByEmailAsync(login.Email);
         if (user == null || !PasswordService.VerifyPassword(login.Password, user.PasswordHash, user.PasswordSalt))
             return Unauthorized("Invalid credentials");
+        var token = _jwtService.GenerateJwtToken(user);
 
-        return Ok(new { message = "Login successful", user.Id, user.Email });
+        return Ok(new { token, user.Id, user.Email });
     }
-
 }
